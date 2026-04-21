@@ -1,89 +1,224 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Delta インストール</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f2f4f7;
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
+<meta charset="utf-8">
+<title>Delta Install Tool</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-    .container {
-      max-width: 400px;
-      margin: 60px auto;
-      background: #fff;
-      padding: 30px 20px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
+<style>
+:root {
+  --bg: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  --card: rgba(255,255,255,0.08);
+}
 
-    h1 {
-      margin-bottom: 10px;
-      font-size: 24px;
-    }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    p {
-      color: #555;
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
+.card {
+  width: 90%;
+  max-width: 380px;
+  padding: 30px;
+  border-radius: 20px;
+  background: var(--card);
+  backdrop-filter: blur(15px);
+  text-align: center;
+  color: white;
+}
 
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      margin: 10px 0;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 16px;
-    }
+.logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  margin: 0 auto 15px;
+  overflow: hidden;
+}
 
-    .install {
-      background: #007aff;
-      color: white;
-    }
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    .download {
-      background: #34c759;
-      color: white;
-    }
+h1 {
+  margin: 10px 0;
+}
 
-    .note {
-      font-size: 12px;
-      color: #888;
-      margin-top: 20px;
-    }
-  </style>
+.btn {
+  display: block;
+  width: 90%;
+  margin: 10px auto;
+  padding: 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: bold;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.install {
+  background: #007aff;
+  color: white;
+}
+
+.download {
+  background: #34c759;
+  color: white;
+}
+
+.progress {
+  width: 90%;
+  height: 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  margin: 20px auto;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  width: 0%;
+  background: #00c6ff;
+  transition: width 0.3s;
+}
+
+.status {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.note {
+  font-size: 12px;
+  margin-top: 20px;
+  opacity: 0.7;
+}
+</style>
 </head>
+
 <body>
 
-  <div class="container">
-    <h1>Delta をインストール</h1>
-    <p>Safariでこのページを開き、下のボタンをタップしてください。</p>
+<div class="card">
 
-    <!-- ダイレクトインストール -->
-    <a class="btn install"
-       href="itms-services://?action=download-manifest&url=https://kouya77.github.io/Delta/manifest.plist">
-      📲 インストール
-    </a>
-
-    <!-- ダウンロードボタン -->
-    <a class="btn download"
-       href="https://github.com/kouya77/Delta/releases/download/1.0/Delta.ipa">
-      ⬇️ IPAをダウンロード
-    </a>
-
-    <p class="note">
-      ※ .ipa は署名済み（Ad-hoc / Enterprise）である必要があります<br>
-      ※ インストールはSafariでのみ動作します
-    </p>
+  <div class="logo">
+    <img src="https://www.dropbox.com/scl/fi/0w09mf8weh3womxnt0kcz/2026-04-08-19-48-02.jpg?rlkey=ez0p83dc809q6h8rk6po50a7t&st=wuq8j3ut&raw=1" alt="icon">
   </div>
+
+  <h1>Delta iOS IPA</h1>
+
+  <a id="installBtn" class="btn install" onclick="installApp(event)" href="#">Install</a>
+  <a id="downloadBtn" class="btn download" onclick="downloadApp(event)" href="#">Download IPA</a>
+
+  <div class="progress">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <div class="status" id="status">Ready</div>
+
+  <div class="note" id="note"></div>
+
+</div>
+
+<script>
+let progress = 0;
+let timer;
+
+// ================== 言語処理 ==================
+function setJapanese() {
+  document.getElementById("installBtn").innerText = "インストール";
+  document.getElementById("downloadBtn").innerText = "IPAをダウンロード";
+  document.getElementById("status").innerText = "待機中";
+  document.getElementById("note").innerHTML =
+    "Safariで開いてください<br>インストール後、設定 → 一般 → VPNとデバイス管理 で信頼してください";
+}
+
+function setEnglish() {
+  document.getElementById("installBtn").innerText = "Install";
+  document.getElementById("downloadBtn").innerText = "Download IPA";
+  document.getElementById("status").innerText = "Ready";
+  document.getElementById("note").innerHTML =
+    "Requires Safari browser<br>After installation, go to Settings → General → VPN & Device Management and trust the developer profile.";
+}
+
+function detectLanguage() {
+  const lang = navigator.language || "en";
+
+  if (lang.startsWith("ja")) {
+    setJapanese();
+  } else {
+    // IP fallback
+    fetch("https://ipapi.co/json/")
+      .then(res => res.json())
+      .then(data => {
+        if (data.country === "JP") {
+          setJapanese();
+        } else {
+          setEnglish();
+        }
+      })
+      .catch(() => {
+        setEnglish();
+      });
+  }
+}
+
+window.onload = detectLanguage;
+
+// ================== 進行バー ==================
+function startProgress(text) {
+  progress = 0;
+  document.getElementById("bar").style.width = "0%";
+  document.getElementById("status").innerText = text;
+
+  document.querySelectorAll(".btn").forEach(b => {
+    b.style.pointerEvents = "none";
+    b.style.opacity = "0.5";
+  });
+
+  timer = setInterval(() => {
+    if (progress >= 90) return;
+    progress += Math.random() * 15;
+    document.getElementById("bar").style.width = progress + "%";
+  }, 300);
+}
+
+function finishProgress() {
+  clearInterval(timer);
+  document.getElementById("bar").style.width = "100%";
+}
+
+// ================== ボタン処理 ==================
+function installApp(e) {
+  e.preventDefault();
+  startProgress("Installing...");
+
+  setTimeout(() => {
+    finishProgress();
+    window.location.href =
+      "itms-services://?action=download-manifest&url=https://Delta-executor9.github.io/Delta/manifest.plist";
+  }, 1500);
+}
+
+function downloadApp(e) {
+  e.preventDefault();
+  startProgress("Downloading...");
+
+  setTimeout(() => {
+    finishProgress();
+    window.location.href =
+      "https://github.com/Delta-executor9/Delta/releases/download/v1/Delta.ipa";
+  }, 1500);
+}
+</script>
 
 </body>
 </html>
