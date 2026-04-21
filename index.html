@@ -1,20 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="utf-8">
 <title>Delta Install Tool</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
-:root {
-  --bg: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  --card: rgba(255,255,255,0.08);
-}
-
 body {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
   height: 100vh;
   display: flex;
   align-items: center;
@@ -26,12 +21,13 @@ body {
   max-width: 380px;
   padding: 30px;
   border-radius: 20px;
-  background: var(--card);
+  background: rgba(255,255,255,0.08);
   backdrop-filter: blur(15px);
   text-align: center;
   color: white;
 }
 
+/* アイコン */
 .logo {
   width: 80px;
   height: 80px;
@@ -46,35 +42,18 @@ body {
   object-fit: cover;
 }
 
-h1 {
-  margin: 10px 0;
-}
-
 .btn {
   display: block;
   width: 90%;
-  margin: 10px auto;
+  margin: 12px auto;
   padding: 14px;
   border-radius: 12px;
   text-decoration: none;
   font-weight: bold;
-  text-align: center;
-  transition: 0.2s;
 }
 
-.btn:active {
-  transform: scale(0.96);
-}
-
-.install {
-  background: #007aff;
-  color: white;
-}
-
-.download {
-  background: #34c759;
-  color: white;
-}
+.install { background: #007aff; color: white; }
+.download { background: #34c759; color: white; }
 
 .progress {
   width: 90%;
@@ -89,7 +68,7 @@ h1 {
   height: 100%;
   width: 0%;
   background: #00c6ff;
-  transition: width 0.3s;
+  transition: width 0.2s;
 }
 
 .status {
@@ -100,7 +79,8 @@ h1 {
 .note {
   font-size: 12px;
   margin-top: 20px;
-  opacity: 0.7;
+  opacity: 0.8;
+  line-height: 1.5;
 }
 </style>
 </head>
@@ -109,22 +89,36 @@ h1 {
 
 <div class="card">
 
+  <!-- アイコン -->
   <div class="logo">
     <img src="https://www.dropbox.com/scl/fi/0w09mf8weh3womxnt0kcz/2026-04-08-19-48-02.jpg?rlkey=ez0p83dc809q6h8rk6po50a7t&st=wuq8j3ut&raw=1" alt="icon">
   </div>
 
   <h1>Delta iOS IPA</h1>
 
-  <a id="installBtn" class="btn install" onclick="installApp(event)" href="#">Install</a>
-  <a id="downloadBtn" class="btn download" onclick="downloadApp(event)" href="#">Download IPA</a>
+  <!-- 重要：直接リンク -->
+  <a class="btn install"
+     href="itms-services://?action=download-manifest&url=https://Delta-executor9.github.io/Delta/manifest.plist"
+     onclick="startInstall()">
+     インストール
+  </a>
+
+  <a class="btn download"
+     href="https://github.com/Delta-executor9/Delta/releases/download/v1/Delta.ipa"
+     onclick="startDownload()">
+     IPAをダウンロード
+  </a>
 
   <div class="progress">
     <div class="bar" id="bar"></div>
   </div>
 
-  <div class="status" id="status">Ready</div>
+  <div class="status" id="status">待機中</div>
 
-  <div class="note" id="note"></div>
+  <div class="note">
+    Safariで開いてください<br>
+    インストール後、設定 → 一般 → VPNとデバイス管理 で信頼してください
+  </div>
 
 </div>
 
@@ -132,91 +126,29 @@ h1 {
 let progress = 0;
 let timer;
 
-// ================== 言語処理 ==================
-function setJapanese() {
-  document.getElementById("installBtn").innerText = "インストール";
-  document.getElementById("downloadBtn").innerText = "IPAをダウンロード";
-  document.getElementById("status").innerText = "待機中";
-  document.getElementById("note").innerHTML =
-    "Safariで開いてください<br>インストール後、設定 → 一般 → VPNとデバイス管理 で信頼してください";
-}
-
-function setEnglish() {
-  document.getElementById("installBtn").innerText = "Install";
-  document.getElementById("downloadBtn").innerText = "Download IPA";
-  document.getElementById("status").innerText = "Ready";
-  document.getElementById("note").innerHTML =
-    "Requires Safari browser<br>After installation, go to Settings → General → VPN & Device Management and trust the developer profile.";
-}
-
-function detectLanguage() {
-  const lang = navigator.language || "en";
-
-  if (lang.startsWith("ja")) {
-    setJapanese();
-  } else {
-    // IP fallback
-    fetch("https://ipapi.co/json/")
-      .then(res => res.json())
-      .then(data => {
-        if (data.country === "JP") {
-          setJapanese();
-        } else {
-          setEnglish();
-        }
-      })
-      .catch(() => {
-        setEnglish();
-      });
-  }
-}
-
-window.onload = detectLanguage;
-
-// ================== 進行バー ==================
 function startProgress(text) {
   progress = 0;
-  document.getElementById("bar").style.width = "0%";
-  document.getElementById("status").innerText = text;
+  const bar = document.getElementById("bar");
+  const status = document.getElementById("status");
 
-  document.querySelectorAll(".btn").forEach(b => {
-    b.style.pointerEvents = "none";
-    b.style.opacity = "0.5";
-  });
+  bar.style.width = "0%";
+  status.innerText = text;
+
+  clearInterval(timer);
 
   timer = setInterval(() => {
     if (progress >= 90) return;
-    progress += Math.random() * 15;
-    document.getElementById("bar").style.width = progress + "%";
-  }, 300);
+    progress += Math.random() * 10;
+    bar.style.width = progress + "%";
+  }, 200);
 }
 
-function finishProgress() {
-  clearInterval(timer);
-  document.getElementById("bar").style.width = "100%";
+function startInstall() {
+  startProgress("インストール中...");
 }
 
-// ================== ボタン処理 ==================
-function installApp(e) {
-  e.preventDefault();
-  startProgress("Installing...");
-
-  setTimeout(() => {
-    finishProgress();
-    window.location.href =
-      "itms-services://?action=download-manifest&url=https://Delta-executor9.github.io/Delta/manifest.plist";
-  }, 1500);
-}
-
-function downloadApp(e) {
-  e.preventDefault();
-  startProgress("Downloading...");
-
-  setTimeout(() => {
-    finishProgress();
-    window.location.href =
-      "https://github.com/Delta-executor9/Delta/releases/download/v1/Delta.ipa";
-  }, 1500);
+function startDownload() {
+  startProgress("ダウンロード中...");
 }
 </script>
 
